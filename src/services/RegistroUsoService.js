@@ -133,14 +133,14 @@ class RegistroUsoService {
     return { valido: true };
   }
 
-  create(dados, usuarioId, userType) {
+  create(dados, usuarioId, userRole) {
     validateRequired(dados.prescricaoId, 'prescricaoId');
     validateRequired(dados.dosagem, 'dosagem');
     validateRequired(dados.dataHora, 'dataHora');
 
     const prescricao = PrescricaoService.findById(dados.prescricaoId);
 
-    if (prescricao.usuarioId !== usuarioId && userType !== 'ADMIN') {
+    if (prescricao.usuarioId !== usuarioId && userRole !== 'ADMIN') {
       throw new ValidationError('Prescricao nao pertence ao usuario');
     }
 
@@ -148,7 +148,7 @@ class RegistroUsoService {
 
     const validacaoDuplicidade = this.validarDuplicidade(dados.prescricaoId, dataHora);
     if (!validacaoDuplicidade.valido) {
-      throw new ConflictError(validacaoDuplicidade.mensagem);
+      throw new ValidationError(validacaoDuplicidade.mensagem);
     }
 
     const validacaoPeriodo = this.validarPeriodoPrescricao(dados.prescricaoId, dataHora);
@@ -216,8 +216,8 @@ class RegistroUsoService {
       }));
   }
 
-  findByUsuario(usuarioId, userType) {
-    const filtro = userType === 'ADMIN'
+  findByUsuario(usuarioId, userRole) {
+    const filtro = userRole === 'ADMIN'
       ? r => isActive(r)
       : r => {
           const prescricao = PrescricaoService.findById(r.prescricaoId);

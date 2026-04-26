@@ -4,19 +4,9 @@ const { sendSuccess, sendError } = require('./response');
 class UserController {
   async register(req, res, next) {
     try {
-      const { email, senha, nome, tipo } = req.body;
-      const usuario = UserService.create(email, senha, nome, tipo);
+      const { email, senha, nome, role, idade } = req.body;
+      const usuario = await UserService.create(email, senha, nome, role, idade);
       sendSuccess(res, usuario, 201, 'Usuário criado com sucesso');
-    } catch (error) {
-      sendError(res, error);
-    }
-  }
-
-  async login(req, res, next) {
-    try {
-      const { email, senha } = req.body;
-      const resultado = UserService.login(email, senha);
-      sendSuccess(res, resultado, 200, 'Login realizado com sucesso');
     } catch (error) {
       sendError(res, error);
     }

@@ -172,10 +172,10 @@ class PrescricaoService {
       });
   }
 
-  update(prescricaoId, dados, usuarioId, userType = 'USER') {
+  update(prescricaoId, dados, usuarioId, userRole = 'USER') {
     const prescricao = this.findById(prescricaoId);
 
-    if (prescricao.usuarioId !== usuarioId && userType !== 'ADMIN') {
+    if (prescricao.usuarioId !== usuarioId && userRole !== 'ADMIN') {
       throw new ValidationError('Prescricao nao pertence ao usuario');
     }
 
@@ -214,15 +214,15 @@ class PrescricaoService {
     return prescricao;
   }
 
-  delete(prescricaoId, usuarioId, userType = 'USER') {
+  delete(prescricaoId, usuarioId, userRole = 'USER') {
     const prescricao = this.findById(prescricaoId);
 
-    if (prescricao.usuarioId !== usuarioId && userType !== 'ADMIN') {
+    if (prescricao.usuarioId !== usuarioId && userRole !== 'ADMIN') {
       throw new ValidationError('Prescricao nao pertence ao usuario');
     }
 
     if (isPrescriptionActive(prescricao)) {
-      throw new ConflictError('Nao e possivel deletar prescricao ativa');
+      throw new ValidationError('Nao e possivel deletar prescricao ativa');
     }
 
     prescricao.deleted = true;

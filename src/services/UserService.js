@@ -1,13 +1,13 @@
 const { v4: uuidv4 } = require('uuid');
 const database = require('../models/database');
+const AuthService = require('./auth.service');
 const { NotFoundError, ConflictError, ValidationError } = require('../models/errors');
-const { generateToken, hashPassword, verifyPassword } = require('./authService');
 const { validateEmail, validateRequired } = require('../models/validators');
 
 const isActive = item => !item.deleted && !item.deletedAt;
 
 class UserService {
-  create(email, senha, nome, tipo = 'USER') {
+  async create(email, senha, nome, role = 'USER', idade) {
     validateRequired(email, 'Email');
     validateRequired(senha, 'Senha');
     validateRequired(nome, 'Nome');
@@ -24,16 +24,23 @@ class UserService {
       throw new ConflictError('Email ja registrado');
     }
 
-    if (!['ADMIN', 'USER'].includes(tipo)) {
-      throw new ValidationError('Tipo de usuario invalido');
+    if (!['ADMIN', 'USER'].includes(role)) {
+      throw new ValidationError('Role de usuario invalido');
     }
+
+    if (idade !== undefined && (typeof idade !== 'number' || idade < 0)) {
+      throw new ValidationError('Idade deve ser um numero maior ou igual a zero');
+    }
+
+    const hashedPassword = await AuthService.hashPassword(senha);
 
     const novoUsuario = {
       id: uuidv4(),
       email,
-      senha: hashPassword(senha),
+      senha: hashedPassword,
       nome,
-      tipo,
+      role,
+      idade,
       dataCriacao: new Date(),
       deleted: false,
       deletedAt: null,
@@ -45,32 +52,8 @@ class UserService {
       id: novoUsuario.id,
       email: novoUsuario.email,
       nome: novoUsuario.nome,
-      tipo: novoUsuario.tipo,
-    };
-  }
-
-  login(email, senha) {
-    validateRequired(email, 'Email');
-    validateRequired(senha, 'Senha');
-
-    const usuario = database.users.find(
-      u => u.email === email && isActive(u)
-    );
-
-    if (!usuario || !verifyPassword(senha, usuario.senha)) {
-      throw new ValidationError('Email ou senha incorretos');
-    }
-
-    const token = generateToken(usuario.id, usuario.tipo);
-
-    return {
-      token,
-      usuario: {
-        id: usuario.id,
-        email: usuario.email,
-        nome: usuario.nome,
-        tipo: usuario.tipo,
-      },
+      role: novoUsuario.role,
+      idade: novoUsuario.idade,
     };
   }
 
@@ -85,8 +68,9 @@ class UserService {
       id: usuario.id,
       email: usuario.email,
       nome: usuario.nome,
-      tipo: usuario.tipo,
+      role: usuario.role,
       dataCriacao: usuario.dataCriacao,
+      idade: usuario.idade,
     };
   }
 
@@ -99,6 +83,7 @@ class UserService {
         nome: u.nome,
         tipo: u.tipo,
         dataCriacao: u.dataCriacao,
+        idade: u.idade,
       }));
   }
 
@@ -127,6 +112,13 @@ class UserService {
       usuario.nome = dados.nome;
     }
 
+    if (dados.idade !== undefined) {
+      if (typeof dados.idade !== 'number' || dados.idade < 0) {
+        throw new ValidationError('Idade deve ser um numero maior ou igual a zero');
+      }
+      usuario.idade = dados.idade;
+    }
+
     if (dados.senha) {
       usuario.senha = hashPassword(dados.senha);
     }
@@ -136,6 +128,7 @@ class UserService {
       email: usuario.email,
       nome: usuario.nome,
       tipo: usuario.tipo,
+      idade: usuario.idade,
     };
   }
 
@@ -155,7 +148,7 @@ class UserService {
     );
 
     if (possuiHistoricoUso) {
-      throw new ConflictError('Nao e possivel deletar paciente com historico de uso');
+      throw new ValidationError('Nao e possivel deletar paciente com historico de uso');
     }
 
     usuario.deleted = true;

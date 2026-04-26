@@ -4,7 +4,7 @@ const { sendSuccess, sendError } = require('./response');
 class RegistroUsoController {
   async create(req, res, next) {
     try {
-      const registro = RegistroUsoService.create(req.body, req.user.id, req.user.type);
+      const registro = RegistroUsoService.create(req.body, req.user.id, req.user.role);
       sendSuccess(res, registro, 201, 'Registro de uso criado com sucesso');
     } catch (error) {
       sendError(res, error);
@@ -36,7 +36,7 @@ class RegistroUsoController {
       const { usuarioId } = req.params;
 
       // USER só pode ver seus próprios registros
-      if (req.user.type !== 'ADMIN' && usuarioId !== req.user.id) {
+      if (req.user.role !== 'ADMIN' && usuarioId !== req.user.id) {
         return sendError(
           res,
           {
@@ -47,7 +47,7 @@ class RegistroUsoController {
         );
       }
 
-      const registros = RegistroUsoService.findByUsuario(usuarioId, req.user.type);
+      const registros = RegistroUsoService.findByUsuario(usuarioId, req.user.role);
       sendSuccess(res, registros);
     } catch (error) {
       sendError(res, error);

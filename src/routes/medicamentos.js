@@ -1,7 +1,7 @@
 const express = require('express');
 const MedicamentoController = require('../controllers/MedicamentoController');
-const authenticateToken = require('../middlewares/auth');
-const authorize = require('../middlewares/authorization');
+const authMiddleware = require('../middlewares/auth.middleware');
+const roleMiddleware = require('../middlewares/role.middleware');
 
 const router = express.Router();
 
@@ -28,19 +28,19 @@ const router = express.Router();
  *       201:
  *         description: Medicamento criado com sucesso
  */
-router.get('/', authenticateToken, (req, res) =>
+router.get('/', authMiddleware, (req, res) =>
   MedicamentoController.getAll(req, res)
 );
 
-router.post('/', authenticateToken, authorize('ADMIN'), (req, res) =>
+router.post('/', authMiddleware, roleMiddleware(['ADMIN']), (req, res) =>
   MedicamentoController.create(req, res)
 );
 
-router.get('/:id', authenticateToken, (req, res) =>
+router.get('/:id', authMiddleware, (req, res) =>
   MedicamentoController.getById(req, res)
 );
 
-router.put('/:id', authenticateToken, authorize('ADMIN'), (req, res) =>
+router.put('/:id', authMiddleware, roleMiddleware(['ADMIN']), (req, res) =>
   MedicamentoController.update(req, res)
 );
 
@@ -67,16 +67,16 @@ router.put('/:id', authenticateToken, authorize('ADMIN'), (req, res) =>
  *               data:
  *                 mensagem: Medicamento deletado com sucesso
  *                 deletedAt: "2026-04-26T12:00:00.000Z"
- *       409:
+ *       400:
  *         description: Medicamento possui prescricao ativa
  *         content:
  *           application/json:
  *             example:
  *               success: false
  *               message: Nao e possivel deletar medicamento com prescricao ativa
- *               error: ConflictError
+ *               error: ValidationError
  */
-router.delete('/:id', authenticateToken, authorize('ADMIN'), (req, res) =>
+router.delete('/:id', authMiddleware, roleMiddleware(['ADMIN']), (req, res) =>
   MedicamentoController.delete(req, res)
 );
 

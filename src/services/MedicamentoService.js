@@ -122,7 +122,7 @@ class MedicamentoService {
     );
 
     if (prescricoesAtivas.length > 0) {
-      throw new ConflictError('Nao e possivel deletar medicamento com prescricao ativa');
+      throw new ValidationError('Nao e possivel deletar medicamento com prescricao ativa');
     }
 
     medicamento.deleted = true;

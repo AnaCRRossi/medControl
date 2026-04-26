@@ -1,7 +1,7 @@
 const express = require('express');
 const RegistroUsoController = require('../controllers/RegistroUsoController');
-const authenticateToken = require('../middlewares/auth');
-const authorize = require('../middlewares/authorization');
+const authMiddleware = require('../middlewares/auth.middleware');
+const roleMiddleware = require('../middlewares/role.middleware');
 
 const router = express.Router();
 
@@ -28,23 +28,23 @@ const router = express.Router();
  *       201:
  *         description: Registro de uso criado com sucesso
  */
-router.post('/', authenticateToken, (req, res) =>
+router.post('/', authMiddleware, (req, res) =>
   RegistroUsoController.create(req, res)
 );
 
-router.get('/', authenticateToken, authorize('ADMIN'), (req, res) =>
+router.get('/', authMiddleware, roleMiddleware(['ADMIN']), (req, res) =>
   RegistroUsoController.getAll(req, res)
 );
 
-router.get('/prescricao/:prescricaoId', authenticateToken, (req, res) =>
+router.get('/prescricao/:prescricaoId', authMiddleware, (req, res) =>
   RegistroUsoController.getByPrescricao(req, res)
 );
 
-router.get('/usuario/:usuarioId', authenticateToken, (req, res) =>
+router.get('/usuario/:usuarioId', authMiddleware, (req, res) =>
   RegistroUsoController.getByUsuario(req, res)
 );
 
-router.get('/:id', authenticateToken, (req, res) =>
+router.get('/:id', authMiddleware, (req, res) =>
   RegistroUsoController.getById(req, res)
 );
 
@@ -80,8 +80,4 @@ router.get('/:id', authenticateToken, (req, res) =>
  *               message: Registro de uso nao encontrado
  *               error: NotFoundError
  */
-router.delete('/:id', authenticateToken, (req, res) =>
-  RegistroUsoController.delete(req, res)
-);
-
 module.exports = router;

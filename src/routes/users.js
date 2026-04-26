@@ -1,7 +1,7 @@
 const express = require('express');
 const UserController = require('../controllers/UserController');
-const authenticateToken = require('../middlewares/auth');
-const authorize = require('../middlewares/authorization');
+const authMiddleware = require('../middlewares/auth.middleware');
+const roleMiddleware = require('../middlewares/role.middleware');
 
 const router = express.Router();
 
@@ -18,23 +18,13 @@ const router = express.Router();
  *   post:
  *     summary: Registra um novo usuário
  *     tags: [Usuários]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       201:
  *         description: Usuário criado com sucesso
  */
-router.post('/register', (req, res) => UserController.register(req, res));
-
-/**
- * @swagger
- * /api/users/login:
- *   post:
- *     summary: Realiza login
- *     tags: [Usuários]
- *     responses:
- *       200:
- *         description: Login realizado com sucesso
- */
-router.post('/login', (req, res) => UserController.login(req, res));
+router.post('/register', authMiddleware, roleMiddleware(['ADMIN']), (req, res) => UserController.register(req, res));
 
 /**
  * @swagger
@@ -42,11 +32,13 @@ router.post('/login', (req, res) => UserController.login(req, res));
  *   get:
  *     summary: Retorna o perfil do usuário autenticado
  *     tags: [Usuários]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Perfil retornado com sucesso
  */
-router.get('/profile', authenticateToken, (req, res) => UserController.getProfile(req, res));
+router.get('/profile', authMiddleware, (req, res) => UserController.getProfile(req, res));
 
 /**
  * @swagger
@@ -54,15 +46,17 @@ router.get('/profile', authenticateToken, (req, res) => UserController.getProfil
  *   get:
  *     summary: Lista usuários
  *     tags: [Usuários]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Lista de usuários
  */
-router.get('/', authenticateToken, authorize('ADMIN'), (req, res) =>
+router.get('/', authMiddleware, roleMiddleware(['ADMIN']), (req, res) =>
   UserController.getAll(req, res)
 );
 
-router.put('/:id', authenticateToken, authorize('ADMIN'), (req, res) =>
+router.put('/:id', authMiddleware, roleMiddleware(['ADMIN']), (req, res) =>
   UserController.update(req, res)
 );
 
@@ -89,16 +83,16 @@ router.put('/:id', authenticateToken, authorize('ADMIN'), (req, res) =>
  *               data:
  *                 mensagem: Paciente deletado com sucesso
  *                 deletedAt: "2026-04-26T12:00:00.000Z"
- *       409:
+ *       400:
  *         description: Paciente possui historico de uso
  *         content:
  *           application/json:
  *             example:
  *               success: false
  *               message: Nao e possivel deletar paciente com historico de uso
- *               error: ConflictError
+ *               error: ValidationError
  */
-router.delete('/:id', authenticateToken, authorize('ADMIN'), (req, res) =>
+router.delete('/:id', authMiddleware, roleMiddleware(['ADMIN']), (req, res) =>
   UserController.delete(req, res)
 );
 

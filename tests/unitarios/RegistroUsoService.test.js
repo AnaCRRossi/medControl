@@ -3,7 +3,7 @@ const RegistroUsoService = require('../../src/services/RegistroUsoService');
 const PrescricaoService = require('../../src/services/PrescricaoService');
 const UserService = require('../../src/services/UserService');
 const MedicamentoService = require('../../src/services/MedicamentoService');
-const { ValidationError, ConflictError } = require('../../src/models/errors');
+const { ValidationError } = require('../../src/models/errors');
 
 describe('RegistroUsoService', () => {
   let userId;
@@ -71,7 +71,7 @@ describe('RegistroUsoService', () => {
           userId,
           'USER'
         );
-      }).toThrow(ConflictError);
+      }).toThrow(ValidationError);
     });
   });
 

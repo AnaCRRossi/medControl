@@ -1,7 +1,7 @@
 const express = require('express');
 const PrescricaoController = require('../controllers/PrescricaoController');
-const authenticateToken = require('../middlewares/auth');
-const authorize = require('../middlewares/authorization');
+const authMiddleware = require('../middlewares/auth.middleware');
+const roleMiddleware = require('../middlewares/role.middleware');
 
 const router = express.Router();
 
@@ -28,23 +28,23 @@ const router = express.Router();
  *       201:
  *         description: Prescrição criada com sucesso
  */
-router.post('/', authenticateToken, (req, res) =>
+router.post('/', authMiddleware, (req, res) =>
   PrescricaoController.create(req, res)
 );
 
-router.get('/', authenticateToken, authorize('ADMIN'), (req, res) =>
+router.get('/', authMiddleware, roleMiddleware(['ADMIN']), (req, res) =>
   PrescricaoController.getAll(req, res)
 );
 
-router.get('/usuario/:usuarioId', authenticateToken, (req, res) =>
+router.get('/usuario/:usuarioId', authMiddleware, (req, res) =>
   PrescricaoController.getByUsuario(req, res)
 );
 
-router.get('/:id', authenticateToken, (req, res) =>
+router.get('/:id', authMiddleware, (req, res) =>
   PrescricaoController.getById(req, res)
 );
 
-router.put('/:id', authenticateToken, (req, res) =>
+router.put('/:id', authMiddleware, (req, res) =>
   PrescricaoController.update(req, res)
 );
 
@@ -71,16 +71,16 @@ router.put('/:id', authenticateToken, (req, res) =>
  *               data:
  *                 mensagem: Prescricao deletada com sucesso
  *                 deletedAt: "2026-04-26T12:00:00.000Z"
- *       409:
+ *       400:
  *         description: Prescricao ativa nao pode ser deletada
  *         content:
  *           application/json:
  *             example:
  *               success: false
  *               message: Nao e possivel deletar prescricao ativa
- *               error: ConflictError
+ *               error: ValidationError
  */
-router.delete('/:id', authenticateToken, (req, res) =>
+router.delete('/:id', authMiddleware, (req, res) =>
   PrescricaoController.delete(req, res)
 );
 

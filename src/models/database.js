@@ -1,4 +1,5 @@
 const { v4: uuidv4 } = require('uuid');
+const AuthService = require('../services/auth.service');
 
 class Database {
   constructor() {
@@ -10,13 +11,14 @@ class Database {
     this.initializeDefaultData();
   }
 
-  initializeDefaultData() {
+  async initializeDefaultData() {
     // Admin padrão para testes
+    const hashedPassword = await AuthService.hashPassword('admin123');
     this.users.push({
       id: uuidv4(),
       email: 'admin@medcontrol.com',
-      senha: 'admin123', // Em produção seria hash
-      tipo: 'ADMIN',
+      senha: hashedPassword,
+      role: 'ADMIN',
       nome: 'Admin User',
       dataCriacao: new Date(),
       deleted: false,
@@ -73,13 +75,13 @@ class Database {
     );
   }
 
-  reset() {
+  async reset() {
     this.users = [];
     this.medicamentos = [];
     this.prescricoes = [];
     this.registrosUso = [];
     this.interacoesMedicamentosas = [];
-    this.initializeDefaultData();
+    await this.initializeDefaultData();
   }
 }
 

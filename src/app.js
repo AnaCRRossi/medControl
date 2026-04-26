@@ -3,13 +3,14 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 const errorHandler = require('./middlewares/errorHandler');
 
+const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/users');
 const medicamentoRoutes = require('./routes/medicamentos');
 const prescricaoRoutes = require('./routes/prescricoes');
 const registroUsoRoutes = require('./routes/registrosUso');
 const UserController = require('./controllers/UserController');
-const authenticateToken = require('./middlewares/auth');
-const authorize = require('./middlewares/authorization');
+const authMiddleware = require('./middlewares/auth.middleware');
+const roleMiddleware = require('./middlewares/role.middleware');
 
 const app = express();
 
@@ -20,12 +21,19 @@ app.get('/', (req, res) => {
   res.send('MedControl API running');
 });
 
-app.use('/api/users', userRoutes);
-app.use('/api/medicamentos', medicamentoRoutes);
-app.use('/api/prescricoes', prescricaoRoutes);
-app.use('/api/registros-uso', registroUsoRoutes);
+app.use('/auth', authRoutes);
+app.use('/api/users', authMiddleware, userRoutes);
+app.use('/api/medicamentos', authMiddleware, medicamentoRoutes);
+app.use('/api/prescricoes', authMiddleware, prescricaoRoutes);
+app.use('/api/registros-uso', authMiddleware, registroUsoRoutes);
 
-app.delete('/api/pacientes/:id', authenticateToken, authorize('ADMIN'), (req, res) =>
+app.post('/api/pacientes', authMiddleware, roleMiddleware(['ADMIN']), (req, res) =>
+  UserController.register(req, res)
+);
+app.get('/api/pacientes', authMiddleware, roleMiddleware(['ADMIN']), (req, res) =>
+  UserController.getAll(req, res)
+);
+app.delete('/api/pacientes/:id', authMiddleware, roleMiddleware(['ADMIN']), (req, res) =>
   UserController.delete(req, res)
 );
 

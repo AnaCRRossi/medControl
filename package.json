@@ -8,8 +8,8 @@
     "dev": "nodemon src/server.js",
     "test": "jest --coverage",
     "test:watch": "jest --watch",
-    "test:unit": "jest tests/unit",
-    "test:integration": "jest tests/integration",
+    "test:unit": "jest tests/unitarios",
+    "test:integration": "jest tests/integracao",
     "test:verbose": "jest --verbose"
   },
   "keywords": [
@@ -22,6 +22,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "dotenv": "^16.0.3",
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.0",

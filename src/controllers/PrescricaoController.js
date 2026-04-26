@@ -1,5 +1,5 @@
 const PrescricaoService = require('../services/PrescricaoService');
-const { sendSuccess, sendError } = require('../utils/response');
+const { sendSuccess, sendError } = require('./response');
 
 class PrescricaoController {
   async create(req, res, next) {
@@ -69,7 +69,7 @@ class PrescricaoController {
   async update(req, res, next) {
     try {
       const { id } = req.params;
-      const prescricao = PrescricaoService.update(id, req.body, req.user.id);
+      const prescricao = PrescricaoService.update(id, req.body, req.user.id, req.user.type);
       sendSuccess(res, prescricao, 200, 'Prescrição atualizada com sucesso');
     } catch (error) {
       sendError(res, error);
@@ -79,7 +79,7 @@ class PrescricaoController {
   async delete(req, res, next) {
     try {
       const { id } = req.params;
-      const resultado = PrescricaoService.delete(id, req.user.id);
+      const resultado = PrescricaoService.delete(id, req.user.id, req.user.type);
       sendSuccess(res, resultado, 200);
     } catch (error) {
       sendError(res, error);

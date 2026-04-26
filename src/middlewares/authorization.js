@@ -1,5 +1,3 @@
-const { ForbiddenError } = require('../utils/errors');
-
 function authorize(...allowedTypes) {
   return (req, res, next) => {
     if (!req.user) {

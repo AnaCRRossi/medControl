@@ -1,5 +1,5 @@
-const { sendError } = require('../utils/response');
-const { ApiError } = require('../utils/errors');
+const { sendError } = require('../controllers/response');
+const { ApiError } = require('../models/errors');
 
 function errorHandler(err, req, res, next) {
   console.error('Erro:', err);

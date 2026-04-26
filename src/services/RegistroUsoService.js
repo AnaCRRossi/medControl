@@ -1,22 +1,36 @@
 const { v4: uuidv4 } = require('uuid');
-const database = require('../database/database');
+const database = require('../models/database');
 const {
   NotFoundError,
   ValidationError,
   ConflictError,
-} = require('../utils/errors');
-const { validateRequired, validateDate } = require('../utils/validators');
+} = require('../models/errors');
+const { validateRequired, validateDate } = require('../models/validators');
 const PrescricaoService = require('./PrescricaoService');
 const MedicamentoService = require('./MedicamentoService');
+
+const DOSE_MAXIMA_DIARIA = 'doseMÃ¡ximaDiaria';
+const isActive = item => !item.deleted && !item.deletedAt;
+
+const doseMaximaDiariaKeys = [
+  'doseMaximaDiaria',
+  'doseM\u00e1ximaDiaria',
+  'doseM\u00c3\u00a1ximaDiaria',
+  'doseM\u00c3\u0083\u00c2\u00a1ximaDiaria',
+];
+
+function getDoseMaximaDiaria(item) {
+  const key = doseMaximaDiariaKeys.find(doseKey => item[doseKey] !== undefined);
+  return key ? item[key] : undefined;
+}
 
 class RegistroUsoService {
   validarIntervaloDoses(prescricaoId, dataHora) {
     const prescricao = PrescricaoService.findById(prescricaoId);
     const medicamento = MedicamentoService.findById(prescricao.medicamentoId);
 
-    // Buscar último registro de uso desta prescrição
     const ultimoRegistro = database.registrosUso
-      .filter(r => r.prescricaoId === prescricaoId && !r.deleted)
+      .filter(r => r.prescricaoId === prescricaoId && isActive(r))
       .sort((a, b) => new Date(b.dataHora) - new Date(a.dataHora))[0];
 
     if (ultimoRegistro) {
@@ -26,7 +40,7 @@ class RegistroUsoService {
       if (horasDecorridas < medicamento.intervaloMinimoHoras) {
         return {
           valido: false,
-          mensagem: `Intervalo mínimo de ${medicamento.intervaloMinimoHoras}h não atingido. Próxima dose permitida em ${ultimoRegistro.dataHora}`,
+          mensagem: `Intervalo minimo de ${medicamento.intervaloMinimoHoras}h nao atingido`,
         };
       }
     }
@@ -42,35 +56,35 @@ class RegistroUsoService {
     const inicioDia = new Date(dataAtual.getFullYear(), dataAtual.getMonth(), dataAtual.getDate());
     const fimDia = new Date(inicioDia.getTime() + 24 * 60 * 60 * 1000);
 
-    // Somar todas as doses do dia para este medicamento
-    const dosequeDoDia = database.registrosUso
+    const doseDoDia = database.registrosUso
       .filter(r => {
-        const prescricao = PrescricaoService.findById(r.prescricaoId);
-        return prescricao.medicamentoId === medicamento.id &&
-               !r.deleted &&
-               new Date(r.dataHora) >= inicioDia &&
-               new Date(r.dataHora) < fimDia;
+        const registroPrescricao = PrescricaoService.findById(r.prescricaoId);
+        return registroPrescricao.medicamentoId === medicamento.id &&
+          isActive(r) &&
+          new Date(r.dataHora) >= inicioDia &&
+          new Date(r.dataHora) < fimDia;
       })
       .reduce((total, r) => total + r.dosagem, 0);
 
-    const doseTotalApos = dosequeDoDia + dosagem;
+    const doseTotalApos = doseDoDia + dosagem;
 
-    if (doseTotalApos > medicamento.doseMáximaDiaria) {
+    const doseMaximaDiaria = getDoseMaximaDiaria(medicamento);
+
+    if (doseTotalApos > doseMaximaDiaria) {
       return {
         valido: false,
-        mensagem: `Dose máxima diária (${medicamento.doseMáximaDiaria}${medicamento.unidade}) seria excedida`,
-        doseTotalAtual: dosequeDoDia,
+        mensagem: `Dose maxima diaria (${doseMaximaDiaria}${medicamento.unidade}) seria excedida`,
+        doseTotalAtual: doseDoDia,
       };
     }
 
-    // Alertar se atingir 80% do limite
-    if (doseTotalApos >= medicamento.doseMáximaDiaria * 0.8) {
+    if (doseTotalApos >= doseMaximaDiaria * 0.8) {
       return {
         valido: true,
         alerta: {
           tipo: 'AVISO_DOSE_MAXIMA',
-          mensagem: `Atingidos ${((doseTotalApos / medicamento.doseMáximaDiaria) * 100).toFixed(1)}% da dose máxima diária`,
-          percentual: ((doseTotalApos / medicamento.doseMáximaDiaria) * 100).toFixed(1),
+          mensagem: `Atingidos ${((doseTotalApos / doseMaximaDiaria) * 100).toFixed(1)}% da dose maxima diaria`,
+          percentual: ((doseTotalApos / doseMaximaDiaria) * 100).toFixed(1),
         },
       };
     }
@@ -85,14 +99,14 @@ class RegistroUsoService {
     if (data < new Date(prescricao.dataInicio)) {
       return {
         valido: false,
-        mensagem: `Uso anterior à data de início da prescrição (${prescricao.dataInicio})`,
+        mensagem: 'Uso anterior a data de inicio da prescricao',
       };
     }
 
     if (data > new Date(prescricao.dataFim)) {
       return {
         valido: false,
-        mensagem: `Uso posterior à data de término da prescrição (${prescricao.dataFim})`,
+        mensagem: 'Uso posterior a data de termino da prescricao',
       };
     }
 
@@ -105,14 +119,14 @@ class RegistroUsoService {
 
     const existe = database.registrosUso.find(
       r => r.prescricaoId === prescricaoId &&
-           !r.deleted &&
-           new Date(r.dataHora).getTime() === new Date(horaExata).getTime()
+        isActive(r) &&
+        new Date(r.dataHora).getTime() === new Date(horaExata).getTime()
     );
 
     if (existe) {
       return {
         valido: false,
-        mensagem: 'Já existe registro de uso no mesmo horário',
+        mensagem: 'Ja existe registro de uso no mesmo horario',
       };
     }
 
@@ -126,32 +140,27 @@ class RegistroUsoService {
 
     const prescricao = PrescricaoService.findById(dados.prescricaoId);
 
-    // Verificar se o registro pertence ao usuário ou se é ADMIN
     if (prescricao.usuarioId !== usuarioId && userType !== 'ADMIN') {
-      throw new ValidationError('Prescrição não pertence ao usuário');
+      throw new ValidationError('Prescricao nao pertence ao usuario');
     }
 
     const dataHora = validateDate(dados.dataHora, 'dataHora');
 
-    // Validar duplicidade
     const validacaoDuplicidade = this.validarDuplicidade(dados.prescricaoId, dataHora);
     if (!validacaoDuplicidade.valido) {
       throw new ConflictError(validacaoDuplicidade.mensagem);
     }
 
-    // Validar período da prescrição
     const validacaoPeriodo = this.validarPeriodoPrescricao(dados.prescricaoId, dataHora);
     if (!validacaoPeriodo.valido) {
       throw new ValidationError(validacaoPeriodo.mensagem);
     }
 
-    // Validar intervalo entre doses
     const validacaoIntervalo = this.validarIntervaloDoses(dados.prescricaoId, dataHora);
     if (!validacaoIntervalo.valido) {
       throw new ValidationError(validacaoIntervalo.mensagem);
     }
 
-    // Validar dose máxima diária
     const validacaoDoseMax = this.validarDoseMaximaDiaria(
       dados.prescricaoId,
       dados.dosagem,
@@ -169,6 +178,7 @@ class RegistroUsoService {
       notas: dados.notas || '',
       dataCriacao: new Date(),
       deleted: false,
+      deletedAt: null,
     };
 
     database.registrosUso.push(novoRegistro);
@@ -187,11 +197,11 @@ class RegistroUsoService {
 
   findById(registroId) {
     const registro = database.registrosUso.find(
-      r => r.id === registroId && !r.deleted
+      r => r.id === registroId && isActive(r)
     );
 
     if (!registro) {
-      throw new NotFoundError('Registro de uso não encontrado');
+      throw new NotFoundError('Registro de uso nao encontrado');
     }
 
     return registro;
@@ -199,7 +209,7 @@ class RegistroUsoService {
 
   findByPrescricao(prescricaoId) {
     return database.registrosUso
-      .filter(r => r.prescricaoId === prescricaoId && !r.deleted)
+      .filter(r => r.prescricaoId === prescricaoId && isActive(r))
       .map(r => ({
         ...r,
         prescricao: PrescricaoService.findById(prescricaoId),
@@ -208,10 +218,10 @@ class RegistroUsoService {
 
   findByUsuario(usuarioId, userType) {
     const filtro = userType === 'ADMIN'
-      ? r => !r.deleted
+      ? r => isActive(r)
       : r => {
           const prescricao = PrescricaoService.findById(r.prescricaoId);
-          return !r.deleted && prescricao.usuarioId === usuarioId;
+          return isActive(r) && prescricao.usuarioId === usuarioId;
         };
 
     return database.registrosUso
@@ -231,7 +241,7 @@ class RegistroUsoService {
 
   findAll() {
     return database.registrosUso
-      .filter(r => !r.deleted)
+      .filter(isActive)
       .map(r => {
         const prescricao = PrescricaoService.findById(r.prescricaoId);
         const medicamento = MedicamentoService.findById(prescricao.medicamentoId);
@@ -247,9 +257,11 @@ class RegistroUsoService {
 
   delete(registroId) {
     const registro = this.findById(registroId);
-    registro.deleted = true;
 
-    return { mensagem: 'Registro de uso deletado com sucesso' };
+    registro.deleted = true;
+    registro.deletedAt = new Date();
+
+    return { mensagem: 'Registro de uso deletado com sucesso', deletedAt: registro.deletedAt };
   }
 }
 

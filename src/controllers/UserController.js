@@ -1,5 +1,5 @@
 const UserService = require('../services/UserService');
-const { sendSuccess, sendError } = require('../utils/response');
+const { sendSuccess, sendError } = require('./response');
 
 class UserController {
   async register(req, res, next) {

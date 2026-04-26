@@ -1,6 +1,6 @@
-const { verifyToken } = require('../utils/auth');
-const { UnauthorizedError } = require('../utils/errors');
-const database = require('../database/database');
+const { verifyToken } = require('../services/authService');
+const { UnauthorizedError } = require('../models/errors');
+const database = require('../models/database');
 
 function authenticateToken(req, res, next) {
   try {
@@ -17,7 +17,7 @@ function authenticateToken(req, res, next) {
     }
 
     // Verificar se o usuário ainda existe no banco de dados
-    const user = database.users.find(u => u.id === decoded.userId && !u.deleted);
+    const user = database.users.find(u => u.id === decoded.userId && !u.deleted && !u.deletedAt);
     if (!user) {
       throw new UnauthorizedError('Usuário não encontrado');
     }

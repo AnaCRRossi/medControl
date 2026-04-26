@@ -1,7 +1,7 @@
 const request = require('supertest');
 const app = require('../../src/app');
-const database = require('../../src/database/database');
-const { generateToken } = require('../../src/utils/auth');
+const database = require('../../src/models/database');
+const { generateToken } = require('../../src/services/authService');
 
 describe('User API Integration Tests', () => {
   beforeEach(() => {

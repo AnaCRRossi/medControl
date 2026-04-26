@@ -1,21 +1,49 @@
 const { v4: uuidv4 } = require('uuid');
-const database = require('../database/database');
-const { NotFoundError, ValidationError, ConflictError } = require('../utils/errors');
-const { validateRequired, validateNumber } = require('../utils/validators');
+const database = require('../models/database');
+const { NotFoundError, ValidationError, ConflictError } = require('../models/errors');
+const { validateRequired, validateNumber } = require('../models/validators');
+
+const DOSE_MAXIMA_DIARIA_KEYS = [
+  'doseMaximaDiaria',
+  'doseM\u00e1ximaDiaria',
+  'doseM\u00c3\u00a1ximaDiaria',
+  'doseM\u00c3\u0083\u00c2\u00a1ximaDiaria',
+];
+const isActive = item => !item.deleted && !item.deletedAt;
+
+function getDoseMaximaDiaria(item) {
+  const key = DOSE_MAXIMA_DIARIA_KEYS.find(doseKey => item[doseKey] !== undefined);
+  return key ? item[key] : undefined;
+}
+
+function setDoseMaximaDiaria(item, value) {
+  DOSE_MAXIMA_DIARIA_KEYS.forEach(doseKey => {
+    item[doseKey] = value;
+  });
+}
+
+function isPrescriptionActive(prescricao) {
+  const now = new Date();
+  return isActive(prescricao) &&
+    new Date(prescricao.dataInicio) <= now &&
+    new Date(prescricao.dataFim) >= now;
+}
 
 class MedicamentoService {
   create(dados) {
     validateRequired(dados.nome, 'Nome');
     validateRequired(dados.unidade, 'Unidade');
     validateNumber(dados.intervaloMinimoHoras, 'intervaloMinimoHoras', { min: 1 });
-    validateNumber(dados.doseMáximaDiaria, 'doseMáximaDiaria', { min: 1 });
+
+    const doseMaximaDiaria = getDoseMaximaDiaria(dados);
+    validateNumber(doseMaximaDiaria, 'doseMaximaDiaria', { min: 1 });
 
     const existente = database.medicamentos.find(
-      m => m.nome.toLowerCase() === dados.nome.toLowerCase() && !m.deleted
+      m => m.nome.toLowerCase() === dados.nome.toLowerCase() && isActive(m)
     );
 
     if (existente) {
-      throw new ConflictError('Medicamento com este nome já existe');
+      throw new ConflictError('Medicamento com este nome ja existe');
     }
 
     const novoMedicamento = {
@@ -23,11 +51,12 @@ class MedicamentoService {
       nome: dados.nome,
       descricao: dados.descricao || '',
       intervaloMinimoHoras: dados.intervaloMinimoHoras,
-      doseMáximaDiaria: dados.doseMáximaDiaria,
       unidade: dados.unidade,
       dataCriacao: new Date(),
       deleted: false,
+      deletedAt: null,
     };
+    setDoseMaximaDiaria(novoMedicamento, doseMaximaDiaria);
 
     database.medicamentos.push(novoMedicamento);
     return novoMedicamento;
@@ -35,18 +64,18 @@ class MedicamentoService {
 
   findById(medicamentoId) {
     const medicamento = database.medicamentos.find(
-      m => m.id === medicamentoId && !m.deleted
+      m => m.id === medicamentoId && isActive(m)
     );
 
     if (!medicamento) {
-      throw new NotFoundError('Medicamento não encontrado');
+      throw new NotFoundError('Medicamento nao encontrado');
     }
 
     return medicamento;
   }
 
   findAll() {
-    return database.medicamentos.filter(m => !m.deleted);
+    return database.medicamentos.filter(isActive);
   }
 
   update(medicamentoId, dados) {
@@ -55,10 +84,10 @@ class MedicamentoService {
     if (dados.nome && dados.nome !== medicamento.nome) {
       const existente = database.medicamentos.find(
         m => m.nome.toLowerCase() === dados.nome.toLowerCase() &&
-            m.id !== medicamentoId && !m.deleted
+          m.id !== medicamentoId && isActive(m)
       );
       if (existente) {
-        throw new ConflictError('Medicamento com este nome já existe');
+        throw new ConflictError('Medicamento com este nome ja existe');
       }
       medicamento.nome = dados.nome;
     }
@@ -72,9 +101,10 @@ class MedicamentoService {
       medicamento.intervaloMinimoHoras = dados.intervaloMinimoHoras;
     }
 
-    if (dados.doseMáximaDiaria !== undefined) {
-      validateNumber(dados.doseMáximaDiaria, 'doseMáximaDiaria', { min: 1 });
-      medicamento.doseMáximaDiaria = dados.doseMáximaDiaria;
+    const doseMaximaDiaria = getDoseMaximaDiaria(dados);
+    if (doseMaximaDiaria !== undefined) {
+      validateNumber(doseMaximaDiaria, 'doseMaximaDiaria', { min: 1 });
+      setDoseMaximaDiaria(medicamento, doseMaximaDiaria);
     }
 
     if (dados.unidade) {
@@ -87,22 +117,18 @@ class MedicamentoService {
   delete(medicamentoId) {
     const medicamento = this.findById(medicamentoId);
 
-    // Verificar se há prescrições ativas com este medicamento
     const prescricoesAtivas = database.prescricoes.filter(
-      p => p.medicamentoId === medicamentoId && !p.deleted && 
-           new Date(p.dataFim) > new Date()
+      p => p.medicamentoId === medicamentoId && isPrescriptionActive(p)
     );
 
     if (prescricoesAtivas.length > 0) {
-      throw new ValidationError(
-        'Não é possível deletar medicamento com prescrições ativas'
-      );
+      throw new ConflictError('Nao e possivel deletar medicamento com prescricao ativa');
     }
 
-    // Soft delete
     medicamento.deleted = true;
+    medicamento.deletedAt = new Date();
 
-    return { mensagem: 'Medicamento deletado com sucesso' };
+    return { mensagem: 'Medicamento deletado com sucesso', deletedAt: medicamento.deletedAt };
   }
 }
 

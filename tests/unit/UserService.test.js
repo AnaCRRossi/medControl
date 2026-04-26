@@ -1,6 +1,6 @@
-const database = require('../../src/database/database');
+const database = require('../../src/models/database');
 const UserService = require('../../src/services/UserService');
-const { ValidationError, ConflictError, NotFoundError } = require('../../src/utils/errors');
+const { ValidationError, ConflictError, NotFoundError } = require('../../src/models/errors');
 
 describe('UserService', () => {
   beforeEach(() => {

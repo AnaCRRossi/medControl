@@ -20,6 +20,7 @@ class Database {
       nome: 'Admin User',
       dataCriacao: new Date(),
       deleted: false,
+      deletedAt: null,
     });
 
     // Medicamentos padrão
@@ -33,6 +34,7 @@ class Database {
         unidade: 'mg',
         dataCriacao: new Date(),
         deleted: false,
+        deletedAt: null,
       },
       {
         id: uuidv4(),
@@ -43,6 +45,7 @@ class Database {
         unidade: 'mg',
         dataCriacao: new Date(),
         deleted: false,
+        deletedAt: null,
       },
       {
         id: uuidv4(),
@@ -53,6 +56,7 @@ class Database {
         unidade: 'mg',
         dataCriacao: new Date(),
         deleted: false,
+        deletedAt: null,
       }
     );
 

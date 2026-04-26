@@ -1,27 +1,10 @@
+require('dotenv').config();
+
 const app = require('./app');
-const config = require('./config/config');
 
-const PORT = config.port;
+const PORT = process.env.PORT || 3000;
 
-const server = app.listen(PORT, () => {
-  console.log(`Server rodando na porta ${PORT}`);
-  console.log(`Ambiente: ${config.env}`);
-  console.log(`Health check: http://localhost:${PORT}/health`);
+app.listen(PORT, () => {
+  console.log(`MedControl API running on http://localhost:${PORT}`);
+  console.log(`Swagger available on http://localhost:${PORT}/api-docs`);
 });
-
-// Tratamento de erros não capturados
-process.on('unhandledRejection', (err) => {
-  console.error('Promise rejection não capturada:', err);
-  server.close(() => {
-    process.exit(1);
-  });
-});
-
-process.on('uncaughtException', (err) => {
-  console.error('Erro não capturado:', err);
-  server.close(() => {
-    process.exit(1);
-  });
-});
-
-module.exports = server;

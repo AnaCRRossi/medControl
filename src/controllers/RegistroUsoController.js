@@ -1,5 +1,5 @@
 const RegistroUsoService = require('../services/RegistroUsoService');
-const { sendSuccess, sendError } = require('../utils/response');
+const { sendSuccess, sendError } = require('./response');
 
 class RegistroUsoController {
   async create(req, res, next) {

@@ -1,7 +1,7 @@
 {
   "name": "medcontrol",
   "version": "1.0.0",
-  "description": "API REST para controle de medicamentos com prescrições e registros de uso",
+  "description": "API REST para gerenciamento de medicamentos",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
@@ -10,36 +10,29 @@
     "test:watch": "jest --watch",
     "test:unit": "jest tests/unit",
     "test:integration": "jest tests/integration",
-    "test:verbose": "jest --verbose",
-    "lint": "eslint src",
-    "lint:fix": "eslint src --fix",
-    "docker:build": "docker build -t medcontrol:latest .",
-    "docker:run": "docker run -p 3000:3000 medcontrol:latest",
-    "docker:compose:up": "docker-compose up -d",
-    "docker:compose:down": "docker-compose down",
-    "docker:compose:logs": "docker-compose logs -f"
+    "test:verbose": "jest --verbose"
   },
   "keywords": [
     "medicamentos",
-    "prescrição",
-    "saúde",
+    "prescricao",
+    "saude",
     "api",
     "rest"
   ],
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "express": "^4.18.2",
-    "uuid": "^9.0.0",
-    "jsonwebtoken": "^9.0.0",
     "dotenv": "^16.0.3",
-    "express-validator": "^7.0.0",
-    "bcryptjs": "^2.4.3"
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
+    "uuid": "^9.0.0"
   },
   "devDependencies": {
-    "nodemon": "^2.0.22",
+    "eslint": "^8.44.0",
     "jest": "^29.5.0",
-    "supertest": "^6.3.3",
-    "eslint": "^8.44.0"
+    "nodemon": "^2.0.22",
+    "supertest": "^6.3.3"
   }
 }

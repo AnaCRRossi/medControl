@@ -1,34 +1,34 @@
 const express = require('express');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./config/swagger');
 const errorHandler = require('./middlewares/errorHandler');
 
-// Importar rotas
 const userRoutes = require('./routes/users');
 const medicamentoRoutes = require('./routes/medicamentos');
 const prescricaoRoutes = require('./routes/prescricoes');
 const registroUsoRoutes = require('./routes/registrosUso');
+const UserController = require('./controllers/UserController');
+const authenticateToken = require('./middlewares/auth');
+const authorize = require('./middlewares/authorization');
 
 const app = express();
 
-// Middlewares de parsing
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// Health check
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'API MedControl está funcionando',
-    timestamp: new Date().toISOString(),
-  });
+app.get('/', (req, res) => {
+  res.send('MedControl API running');
 });
 
-// Rotas da API
 app.use('/api/users', userRoutes);
 app.use('/api/medicamentos', medicamentoRoutes);
 app.use('/api/prescricoes', prescricaoRoutes);
 app.use('/api/registros-uso', registroUsoRoutes);
 
-// Rota 404
+app.delete('/api/pacientes/:id', authenticateToken, authorize('ADMIN'), (req, res) =>
+  UserController.delete(req, res)
+);
+
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -36,7 +36,6 @@ app.use((req, res) => {
   });
 });
 
-// Middleware de tratamento de erros (deve ser o último)
 app.use(errorHandler);
 
 module.exports = app;

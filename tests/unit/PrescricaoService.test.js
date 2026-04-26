@@ -1,8 +1,8 @@
-const database = require('../../src/database/database');
+const database = require('../../src/models/database');
 const PrescricaoService = require('../../src/services/PrescricaoService');
 const UserService = require('../../src/services/UserService');
 const MedicamentoService = require('../../src/services/MedicamentoService');
-const { ValidationError, ConflictError } = require('../../src/utils/errors');
+const { ValidationError, ConflictError } = require('../../src/models/errors');
 
 describe('PrescricaoService', () => {
   let userId;
@@ -48,7 +48,7 @@ describe('PrescricaoService', () => {
           {
             medicamentoId,
             dosagem: 500,
-            frequencia: '4h',
+            frequencia: '2h',
             dataInicio: today,
             dataFim: nextMonth,
           },

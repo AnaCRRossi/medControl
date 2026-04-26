@@ -1,5 +1,5 @@
 const MedicamentoService = require('../services/MedicamentoService');
-const { sendSuccess, sendError } = require('../utils/response');
+const { sendSuccess, sendError } = require('./response');
 
 class MedicamentoController {
   async create(req, res, next) {

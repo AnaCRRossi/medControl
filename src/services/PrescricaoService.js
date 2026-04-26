@@ -1,20 +1,29 @@
 const { v4: uuidv4 } = require('uuid');
-const database = require('../database/database');
+const database = require('../models/database');
 const {
   NotFoundError,
   ValidationError,
   ConflictError,
-} = require('../utils/errors');
-const { validateRequired, validateNumber, validateDate } = require('../utils/validators');
+} = require('../models/errors');
+const { validateRequired, validateNumber, validateDate } = require('../models/validators');
 const MedicamentoService = require('./MedicamentoService');
+
+const isActive = item => !item.deleted && !item.deletedAt;
+
+function isPrescriptionActive(prescricao) {
+  const now = new Date();
+  return isActive(prescricao) &&
+    new Date(prescricao.dataInicio) <= now &&
+    new Date(prescricao.dataFim) >= now;
+}
 
 class PrescricaoService {
   verificarInteracoes(medicamentoId, outrosMedicamentosIds = []) {
     const interacoes = [];
 
     const todasMedicines = database.prescricoes
-      .filter(p => p.usuarioId === database.users[0].id && !p.deleted &&
-              new Date(p.dataFim) > new Date())
+      .filter(p => p.usuarioId === database.users[0].id && isActive(p) &&
+        new Date(p.dataFim) > new Date())
       .map(p => p.medicamentoId)
       .concat(outrosMedicamentosIds)
       .filter(id => id !== medicamentoId);
@@ -22,7 +31,7 @@ class PrescricaoService {
     todasMedicines.forEach(outroMedicId => {
       const interacao = database.interacoesMedicamentosas.find(
         i => (i.medicamento1Id === medicamentoId && i.medicamento2Id === outroMedicId) ||
-             (i.medicamento1Id === outroMedicId && i.medicamento2Id === medicamentoId)
+          (i.medicamento1Id === outroMedicId && i.medicamento2Id === medicamentoId)
       );
 
       if (interacao) {
@@ -42,7 +51,7 @@ class PrescricaoService {
   create(dados, usuarioId) {
     validateRequired(dados.medicamentoId, 'medicamentoId');
     validateRequired(dados.dosagem, 'dosagem');
-    validateRequired(dados.frequencia, 'frequência');
+    validateRequired(dados.frequencia, 'frequencia');
     validateRequired(dados.dataInicio, 'dataInicio');
     validateRequired(dados.dataFim, 'dataFim');
 
@@ -54,41 +63,38 @@ class PrescricaoService {
     const dataFim = validateDate(dados.dataFim, 'dataFim');
 
     if (dataFim <= dataInicio) {
-      throw new ValidationError('Data de fim deve ser maior que data de início');
+      throw new ValidationError('Data de fim deve ser maior que data de inicio');
     }
 
-    // Validar frequência com intervalo mínimo
     const frequenciaMatch = dados.frequencia.match(/(\d+)h/);
     if (!frequenciaMatch) {
-      throw new ValidationError('Frequência deve estar no formato como "8h", "12h", etc');
+      throw new ValidationError('Frequencia deve estar no formato como "8h", "12h", etc');
     }
 
     const frequenciaHoras = parseInt(frequenciaMatch[1]);
     if (frequenciaHoras < medicamento.intervaloMinimoHoras) {
       throw new ValidationError(
-        `Frequência não pode ser menor que o intervalo mínimo de ${medicamento.intervaloMinimoHoras}h`
+        `Frequencia nao pode ser menor que o intervalo minimo de ${medicamento.intervaloMinimoHoras}h`
       );
     }
 
-    // Verificar interações medicamentosas
     const outrosMedicamentos = database.prescricoes
-      .filter(p => p.usuarioId === usuarioId && !p.deleted &&
-              new Date(p.dataFim) > new Date())
+      .filter(p => p.usuarioId === usuarioId && isActive(p) &&
+        new Date(p.dataFim) > new Date())
       .map(p => p.medicamentoId);
 
     const interacoes = this.verificarInteracoes(dados.medicamentoId, outrosMedicamentos);
 
-    // Verificar sobreposição de doses
     const prescricoesSobrepostas = database.prescricoes.filter(
-      p => p.usuarioId === usuarioId && 
-           p.medicamentoId === dados.medicamentoId &&
-           !p.deleted &&
-           new Date(p.dataFim) > new Date(dataInicio) &&
-           new Date(p.dataInicio) < new Date(dataFim)
+      p => p.usuarioId === usuarioId &&
+        p.medicamentoId === dados.medicamentoId &&
+        isActive(p) &&
+        new Date(p.dataFim) > new Date(dataInicio) &&
+        new Date(p.dataInicio) < new Date(dataFim)
     );
 
     if (prescricoesSobrepostas.length > 0) {
-      throw new ConflictError('Já existe prescrição sobreposta para este medicamento');
+      throw new ConflictError('Ja existe prescricao sobreposta para este medicamento');
     }
 
     const novaPrescricao = {
@@ -104,6 +110,7 @@ class PrescricaoService {
       interacoes,
       dataCriacao: new Date(),
       deleted: false,
+      deletedAt: null,
     };
 
     database.prescricoes.push(novaPrescricao);
@@ -117,7 +124,7 @@ class PrescricaoService {
       },
       alertas: interacoes.length > 0 ? {
         tipo: 'INTERACAO_MEDICAMENTOSA',
-        mensagem: `Este medicamento possui ${interacoes.length} interação(ões)`,
+        mensagem: `Este medicamento possui ${interacoes.length} interacao(oes)`,
         detalhes: interacoes,
       } : null,
     };
@@ -125,11 +132,11 @@ class PrescricaoService {
 
   findById(prescricaoId) {
     const prescricao = database.prescricoes.find(
-      p => p.id === prescricaoId && !p.deleted
+      p => p.id === prescricaoId && isActive(p)
     );
 
     if (!prescricao) {
-      throw new NotFoundError('Prescrição não encontrada');
+      throw new NotFoundError('Prescricao nao encontrada');
     }
 
     return prescricao;
@@ -137,7 +144,7 @@ class PrescricaoService {
 
   findByUsuario(usuarioId) {
     return database.prescricoes
-      .filter(p => p.usuarioId === usuarioId && !p.deleted)
+      .filter(p => p.usuarioId === usuarioId && isActive(p))
       .map(p => {
         const medicamento = MedicamentoService.findById(p.medicamentoId);
         return {
@@ -152,7 +159,7 @@ class PrescricaoService {
 
   findAll() {
     return database.prescricoes
-      .filter(p => !p.deleted)
+      .filter(isActive)
       .map(p => {
         const medicamento = MedicamentoService.findById(p.medicamentoId);
         return {
@@ -165,17 +172,17 @@ class PrescricaoService {
       });
   }
 
-  update(prescricaoId, dados, usuarioId) {
+  update(prescricaoId, dados, usuarioId, userType = 'USER') {
     const prescricao = this.findById(prescricaoId);
 
-    if (prescricao.usuarioId !== usuarioId) {
-      throw new ValidationError('Prescrição não pertence ao usuário');
+    if (prescricao.usuarioId !== usuarioId && userType !== 'ADMIN') {
+      throw new ValidationError('Prescricao nao pertence ao usuario');
     }
 
     if (dados.dataFim) {
       const dataFim = validateDate(dados.dataFim, 'dataFim');
       if (dataFim <= new Date(prescricao.dataInicio)) {
-        throw new ValidationError('Data de fim deve ser maior que data de início');
+        throw new ValidationError('Data de fim deve ser maior que data de inicio');
       }
       prescricao.dataFim = dataFim;
     }
@@ -188,13 +195,13 @@ class PrescricaoService {
     if (dados.frequencia) {
       const frequenciaMatch = dados.frequencia.match(/(\d+)h/);
       if (!frequenciaMatch) {
-        throw new ValidationError('Frequência deve estar no formato como "8h", "12h", etc');
+        throw new ValidationError('Frequencia deve estar no formato como "8h", "12h", etc');
       }
       const medicamento = MedicamentoService.findById(prescricao.medicamentoId);
       const frequenciaHoras = parseInt(frequenciaMatch[1]);
       if (frequenciaHoras < medicamento.intervaloMinimoHoras) {
         throw new ValidationError(
-          `Frequência não pode ser menor que o intervalo mínimo de ${medicamento.intervaloMinimoHoras}h`
+          `Frequencia nao pode ser menor que o intervalo minimo de ${medicamento.intervaloMinimoHoras}h`
         );
       }
       prescricao.frequencia = dados.frequencia;
@@ -207,27 +214,21 @@ class PrescricaoService {
     return prescricao;
   }
 
-  delete(prescricaoId, usuarioId) {
+  delete(prescricaoId, usuarioId, userType = 'USER') {
     const prescricao = this.findById(prescricaoId);
 
-    if (prescricao.usuarioId !== usuarioId) {
-      throw new ValidationError('Prescrição não pertence ao usuário');
+    if (prescricao.usuarioId !== usuarioId && userType !== 'ADMIN') {
+      throw new ValidationError('Prescricao nao pertence ao usuario');
     }
 
-    // Verificar se há registros de uso vinculados
-    const registrosVinculados = database.registrosUso.filter(
-      r => r.prescricaoId === prescricaoId && !r.deleted
-    );
-
-    if (registrosVinculados.length > 0) {
-      throw new ValidationError(
-        'Não é possível deletar prescrição com registros de uso vinculados'
-      );
+    if (isPrescriptionActive(prescricao)) {
+      throw new ConflictError('Nao e possivel deletar prescricao ativa');
     }
 
     prescricao.deleted = true;
+    prescricao.deletedAt = new Date();
 
-    return { mensagem: 'Prescrição deletada com sucesso' };
+    return { mensagem: 'Prescricao deletada com sucesso', deletedAt: prescricao.deletedAt };
   }
 }
 

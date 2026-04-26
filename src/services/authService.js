@@ -1,17 +1,20 @@
 const jwt = require('jsonwebtoken');
-const config = require('../config/config');
+require('dotenv').config();
+
+const jwtSecret = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const jwtExpiration = process.env.JWT_EXPIRATION || '24h';
 
 function generateToken(userId, userType) {
   return jwt.sign(
     { userId, userType },
-    config.jwtSecret,
-    { expiresIn: config.jwtExpiration }
+    jwtSecret,
+    { expiresIn: jwtExpiration }
   );
 }
 
 function verifyToken(token) {
   try {
-    return jwt.verify(token, config.jwtSecret);
+    return jwt.verify(token, jwtSecret);
   } catch (error) {
     return null;
   }

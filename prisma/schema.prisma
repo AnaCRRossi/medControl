@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  role      String
+  name      String
+  age       Int?
+  createdAt DateTime @default(now())
+  deletedAt DateTime?
+
+  patients Patient[]
+}
+
+model Patient {
+  id        String   @id @default(uuid())
+  name      String
+  age       Int?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  prescriptions Prescription[]
+
+  deletedAt DateTime?
+}
+
+model Medication {
+  id               String  @id @default(uuid())
+  name             String
+  maxDailyDose     Float
+  minIntervalHours Int
+
+  prescriptions    Prescription[]
+
+  deletedAt DateTime?
+}
+
+model Prescription {
+  id            String   @id @default(uuid())
+  patientId     String
+  medicationId  String
+
+  dosage        Float
+  unit          String
+  frequency     Int
+
+  startDate     DateTime
+  endDate       DateTime
+
+  patient       Patient     @relation(fields: [patientId], references: [id])
+  medication    Medication  @relation(fields: [medicationId], references: [id])
+
+  usageRecords  UsageRecord[]
+
+  deletedAt     DateTime?
+}
+
+model UsageRecord {
+  id              String   @id @default(uuid())
+  prescriptionId  String
+  takenAt         DateTime
+  dose            Float
+
+  prescription    Prescription @relation(fields: [prescriptionId], references: [id])
+
+  createdAt       DateTime @default(now())
+}

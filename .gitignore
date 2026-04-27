@@ -38,3 +38,5 @@ build/
 
 # Variáveis de ambiente exemplo
 .env.example
+
+/src/generated/prisma

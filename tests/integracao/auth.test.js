@@ -1,37 +1,22 @@
 const request = require('supertest');
 const app = require('../../src/app');
-const database = require('../../src/models/database');
+const { createAdmin, createRegularUser } = require('../helpers/createUser');
+const generateToken = require('../helpers/generateToken');
 
 describe('Autenticacao e autorizacao', () => {
   let adminToken;
   let userToken;
+  let adminUser;
+  let regularUser;
 
   beforeEach(async () => {
-    database.reset();
+    // Create users via service
+    adminUser = await createAdmin();
+    regularUser = await createRegularUser();
 
-    // Login como admin
-    const adminLogin = await request(app)
-      .post('/auth/login')
-      .send({ email: 'admin@medcontrol.com', senha: 'admin123' });
-    adminToken = adminLogin.body.data.token;
-
-    // Criar usuário comum
-    await request(app)
-      .post('/api/users/register')
-      .set('Authorization', `Bearer ${adminToken}`)
-      .send({
-        email: 'user.auth@teste.com',
-        senha: 'senha123',
-        nome: 'Usuario Comum',
-        role: 'USER',
-        idade: 30,
-      });
-
-    // Login como user
-    const userLogin = await request(app)
-      .post('/auth/login')
-      .send({ email: 'user.auth@teste.com', senha: 'senha123' });
-    userToken = userLogin.body.data.token;
+    // Generate tokens
+    adminToken = generateToken(adminUser.id, adminUser.role);
+    userToken = generateToken(regularUser.id, regularUser.role);
   });
 
   it('retorna 401 para requisicoes sem token', async () => {

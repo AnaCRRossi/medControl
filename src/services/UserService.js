@@ -1,10 +1,10 @@
-const { v4: uuidv4 } = require('uuid');
-const database = require('../models/database');
+require('dotenv').config();
+const { PrismaClient } = require('@prisma/client');
 const AuthService = require('./auth.service');
 const { NotFoundError, ConflictError, ValidationError } = require('../models/errors');
 const { validateEmail, validateRequired } = require('../models/validators');
 
-const isActive = item => !item.deleted && !item.deletedAt;
+const prisma = new PrismaClient();
 
 class UserService {
   async create(email, senha, nome, role = 'USER', idade) {
@@ -16,9 +16,12 @@ class UserService {
       throw new ValidationError('Email invalido');
     }
 
-    const existingUser = database.users.find(
-      u => u.email === email && isActive(u)
-    );
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        email: email.toLowerCase(),
+        deletedAt: null
+      }
+    });
 
     if (existingUser) {
       throw new ConflictError('Email ja registrado');
@@ -34,19 +37,17 @@ class UserService {
 
     const hashedPassword = await AuthService.hashPassword(senha);
 
-    const novoUsuario = {
-      id: uuidv4(),
-      email,
-      senha: hashedPassword,
-      nome,
-      role,
-      idade,
-      dataCriacao: new Date(),
-      deleted: false,
-      deletedAt: null,
-    };
+    const novoUsuario = await prisma.user.create({
+      data: {
+        email: email.toLowerCase(),
+        password: hashedPassword,
+        name: nome,
+        role,
+        age: idade
+      }
+    });
 
-    database.users.push(novoUsuario);
+    return novoUsuario;
 
     return {
       id: novoUsuario.id,
@@ -57,8 +58,13 @@ class UserService {
     };
   }
 
-  findById(userId) {
-    const usuario = database.users.find(u => u.id === userId && isActive(u));
+  async findById(userId) {
+    const usuario = await prisma.user.findFirst({
+      where: {
+        id: userId,
+        deletedAt: null
+      }
+    });
 
     if (!usuario) {
       throw new NotFoundError('Usuario nao encontrado');
@@ -67,95 +73,136 @@ class UserService {
     return {
       id: usuario.id,
       email: usuario.email,
-      nome: usuario.nome,
+      name: usuario.name,
       role: usuario.role,
-      dataCriacao: usuario.dataCriacao,
-      idade: usuario.idade,
+      createdAt: usuario.createdAt,
+      age: usuario.age,
     };
   }
 
-  findAll() {
-    return database.users
-      .filter(isActive)
-      .map(u => ({
-        id: u.id,
-        email: u.email,
-        nome: u.nome,
-        tipo: u.tipo,
-        dataCriacao: u.dataCriacao,
-        idade: u.idade,
-      }));
+  async findAll() {
+    const users = await prisma.user.findMany({
+      where: {
+        deletedAt: null
+      }
+    });
+
+    return users.map(u => ({
+      id: u.id,
+      email: u.email,
+      name: u.name,
+      role: u.role,
+      createdAt: u.createdAt,
+      age: u.age,
+    }));
   }
 
-  update(userId, dados) {
-    const usuario = database.users.find(u => u.id === userId && isActive(u));
+  async update(userId, dados) {
+    const usuario = await prisma.user.findFirst({
+      where: {
+        id: userId,
+        deletedAt: null
+      }
+    });
 
     if (!usuario) {
       throw new NotFoundError('Usuario nao encontrado');
     }
+
+    const updateData = {};
 
     if (dados.email && dados.email !== usuario.email) {
       if (!validateEmail(dados.email)) {
         throw new ValidationError('Email invalido');
       }
 
-      const existeOutro = database.users.find(
-        u => u.email === dados.email && u.id !== userId && isActive(u)
-      );
+      const existeOutro = await prisma.user.findFirst({
+        where: {
+          email: dados.email.toLowerCase(),
+          id: { not: userId },
+          deletedAt: null
+        }
+      });
       if (existeOutro) {
         throw new ConflictError('Email ja registrado');
       }
-      usuario.email = dados.email;
+      updateData.email = dados.email.toLowerCase();
     }
 
     if (dados.nome) {
-      usuario.nome = dados.nome;
+      updateData.name = dados.nome;
     }
 
     if (dados.idade !== undefined) {
       if (typeof dados.idade !== 'number' || dados.idade < 0) {
         throw new ValidationError('Idade deve ser um numero maior ou igual a zero');
       }
-      usuario.idade = dados.idade;
+      updateData.age = dados.idade;
     }
 
     if (dados.senha) {
-      usuario.senha = hashPassword(dados.senha);
+      updateData.password = await AuthService.hashPassword(dados.senha);
     }
 
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: updateData
+    });
+
     return {
-      id: usuario.id,
-      email: usuario.email,
-      nome: usuario.nome,
-      tipo: usuario.tipo,
-      idade: usuario.idade,
+      id: updatedUser.id,
+      email: updatedUser.email,
+      name: updatedUser.name,
+      role: updatedUser.role,
+      age: updatedUser.age,
     };
   }
 
-  delete(userId) {
-    const usuario = database.users.find(u => u.id === userId && isActive(u));
+  async delete(userId) {
+    const usuario = await prisma.user.findFirst({
+      where: {
+        id: userId,
+        deletedAt: null
+      }
+    });
 
     if (!usuario) {
       throw new NotFoundError('Usuario nao encontrado');
     }
 
-    const prescricoesDoUsuario = database.prescricoes
-      .filter(p => p.usuarioId === userId)
-      .map(p => p.id);
+    // Check if user has patients with usage records
+    const patients = await prisma.patient.findMany({
+      where: {
+        userId: userId,
+        deletedAt: null
+      },
+      include: {
+        prescriptions: {
+          include: {
+            usageRecords: true
+          }
+        }
+      }
+    });
 
-    const possuiHistoricoUso = database.registrosUso.some(
-      r => prescricoesDoUsuario.includes(r.prescricaoId)
+    const hasUsageHistory = patients.some(patient =>
+      patient.prescriptions.some(prescription =>
+        prescription.usageRecords.length > 0
+      )
     );
 
-    if (possuiHistoricoUso) {
+    if (hasUsageHistory) {
       throw new ValidationError('Nao e possivel deletar paciente com historico de uso');
     }
 
-    usuario.deleted = true;
-    usuario.deletedAt = new Date();
+    await prisma.user.update({
+      where: { id: userId },
+      data: { deletedAt: new Date() }
+    });
 
-    return { mensagem: 'Paciente deletado com sucesso', deletedAt: usuario.deletedAt };
+    return { mensagem: 'Paciente deletado com sucesso', deletedAt: new Date() };
   }
 }
 
 module.exports = new UserService();
+module.exports.prisma = prisma;

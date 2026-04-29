@@ -1,24 +1,76 @@
 const database = require('../../src/models/database');
+const { ValidationError } = require('../../src/models/errors');
+
+// Mock services for unit tests using in-memory database
+const mockMedicamentoService = {
+  create: async (dados) => {
+    const medicamento = {
+      id: require('uuid').v4(),
+      nome: dados.nome,
+      unidade: dados.unidade,
+      intervaloMinimoHoras: dados.intervaloMinimoHoras,
+      doseMaximaDiaria: dados.doseMaximaDiaria,
+      dataCriacao: new Date(),
+      deleted: false,
+      deletedAt: null,
+    };
+    database.medicamentos.push(medicamento);
+    return medicamento;
+  },
+  findById: (id) => {
+    const medicamento = database.medicamentos.find(m => m.id === id && !m.deleted);
+    if (!medicamento) {
+      throw new require('../../src/models/errors').NotFoundError('Medicamento nao encontrado');
+    }
+    return medicamento;
+  }
+};
+
+const mockUserService = {
+  create: async (email, senha, nome) => {
+    const user = {
+      id: require('uuid').v4(),
+      email,
+      senha: await require('../../src/services/auth.service').hashPassword(senha),
+      nome,
+      role: 'USER',
+      dataCriacao: new Date(),
+      deleted: false,
+      deletedAt: null,
+    };
+    database.users.push(user);
+    return user;
+  }
+};
+
+// Mock the services before importing
+jest.mock('../../src/services/MedicamentoService', () => mockMedicamentoService);
+jest.mock('../../src/services/UserService', () => mockUserService);
+
 const RegistroUsoService = require('../../src/services/RegistroUsoService');
 const PrescricaoService = require('../../src/services/PrescricaoService');
-const UserService = require('../../src/services/UserService');
-const MedicamentoService = require('../../src/services/MedicamentoService');
-const { ValidationError } = require('../../src/models/errors');
 
 describe('RegistroUsoService', () => {
   let userId;
   let prescricaoId;
 
-  beforeEach(() => {
-    database.reset();
-    const user = UserService.create('user@teste.com', 'senha123', 'Test User');
+  beforeEach(async () => {
+    await database.reset();
+    const user = await mockUserService.create(`user${Date.now()}@teste.com`, 'senha123', 'Test User');
     userId = user.id;
 
-    const medicamentoId = database.medicamentos[0].id; // Paracetamol
+    const medicamento = await mockMedicamentoService.create({
+      nome: 'Paracetamol',
+      unidade: 'mg',
+      intervaloMinimoHoras: 4,
+      doseMaximaDiaria: 4000
+    });
+    medicamentoId = medicamento.id;
+
     const today = new Date();
     const nextMonth = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-    const prescricao = PrescricaoService.create(
+    const prescricao = await PrescricaoService.create(
       {
         medicamentoId,
         dosagem: 500,

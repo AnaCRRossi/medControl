@@ -1,8 +1,10 @@
 const { verifyToken } = require('../services/authService');
 const { UnauthorizedError } = require('../models/errors');
-const database = require('../models/database');
+const { PrismaClient } = require('@prisma/client');
 
-function authenticateToken(req, res, next) {
+const prisma = new PrismaClient();
+
+async function authenticateToken(req, res, next) {
   try {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -16,9 +18,11 @@ function authenticateToken(req, res, next) {
       throw new UnauthorizedError('Token inválido ou expirado');
     }
 
-    // Verificar se o usuário ainda existe no banco de dados
-    const user = database.users.find(u => u.id === decoded.userId && !u.deleted && !u.deletedAt);
-    if (!user) {
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId }
+    });
+
+    if (!user || user.deletedAt) {
       throw new UnauthorizedError('Usuário não encontrado');
     }
 
@@ -26,6 +30,7 @@ function authenticateToken(req, res, next) {
       id: decoded.userId,
       type: decoded.userType,
       email: user.email,
+      role: user.role,
     };
 
     next();

@@ -1,8 +1,8 @@
 # MedControl API
 
-API REST para gerenciamento de pacientes, medicamentos, prescrições e registros de uso médico.
+API REST completa para controle de medicamentos, prescrições e registros de uso médico.
 
-O projeto utiliza Node.js, Express, Prisma ORM com SQLite, JWT para autenticação, Swagger para documentação e Jest para testes. Desenvolvido com foco em segurança, validações de negócio e boa arquitetura.
+O projeto utiliza Node.js, Express, Prisma ORM com SQLite, JWT para autenticação, Swagger para documentação e Jest para testes. Desenvolvido com foco em segurança, validações de negócio complexas e boa arquitetura.
 
 ## 🚀 Tecnologias Utilizadas
 
@@ -12,7 +12,7 @@ O projeto utiliza Node.js, Express, Prisma ORM com SQLite, JWT para autenticaç�
 - **SQLite** - Banco de dados
 - **JWT** - Autenticação e autorização
 - **bcryptjs** - Hash de senhas
-- **Swagger** - Documentação da API
+- **Swagger** - Documentação interativa da API
 - **Jest** - Framework de testes
 - **Supertest** - Testes de integração
 
@@ -47,6 +47,176 @@ JWT_SECRET=sua-chave-secreta-muito-segura-mude-em-producao
 JWT_EXPIRATION=1h
 DATABASE_URL="file:./dev.db"
 ```
+
+4. Execute as migrações do banco de dados:
+```bash
+npx prisma migrate dev
+```
+
+5. Execute o seed para criar dados iniciais:
+```bash
+npx prisma db seed
+```
+
+## 🚀 Executando a Aplicação
+
+### Desenvolvimento
+```bash
+npm run dev
+```
+
+### Produção
+```bash
+npm start
+```
+
+A API estará disponível em: `http://localhost:3000`
+
+## 📚 Documentação da API
+
+A documentação completa da API está disponível via Swagger UI em:
+**http://localhost:3000/api-docs**
+
+### Funcionalidades Documentadas
+
+#### 🔐 Autenticação
+- `POST /auth/login` - Login e geração de token JWT
+- `POST /auth/register` - Registro de novos usuários (ADMIN)
+
+#### 👥 Usuários
+- `GET /api/users/profile` - Perfil do usuário autenticado
+- `POST /api/users/register` - Registrar novo usuário (ADMIN)
+- `GET /api/users` - Listar todos os usuários (ADMIN)
+- `PUT /api/users/{id}` - Atualizar usuário (ADMIN)
+- `DELETE /api/users/{id}` - Remover usuário (ADMIN)
+
+#### 💊 Medicamentos
+- `GET /api/medicamentos` - Listar medicamentos
+- `POST /api/medicamentos` - Criar medicamento (ADMIN)
+- `GET /api/medicamentos/{id}` - Detalhes do medicamento
+- `PUT /api/medicamentos/{id}` - Atualizar medicamento (ADMIN)
+- `DELETE /api/medicamentos/{id}` - Remover medicamento (ADMIN)
+
+#### 📋 Prescrições
+- `POST /api/prescricoes` - Criar prescrição
+- `GET /api/prescricoes` - Listar prescrições (ADMIN)
+- `GET /api/prescricoes/usuario/{usuarioId}` - Prescrições do usuário
+- `GET /api/prescricoes/{id}` - Detalhes da prescrição
+- `PUT /api/prescricoes/{id}` - Atualizar prescrição
+- `DELETE /api/prescricoes/{id}` - Remover prescrição
+
+#### 📝 Registros de Uso
+- `POST /api/registros-uso` - Registrar uso de medicamento
+- `GET /api/registros-uso` - Listar registros (ADMIN)
+- `GET /api/registros-uso/prescricao/{prescricaoId}` - Registros por prescrição
+- `GET /api/registros-uso/usuario/{usuarioId}` - Registros por usuário
+- `GET /api/registros-uso/{id}` - Detalhes do registro
+- `PUT /api/registros-uso/{id}` - Atualizar registro
+- `DELETE /api/registros-uso/{id}` - Remover registro
+
+### 🔑 Autenticação JWT
+
+Para acessar endpoints protegidos, inclua o token JWT no header:
+```
+Authorization: Bearer <seu-token-jwt>
+```
+
+### 👤 Roles e Permissões
+
+- **ADMIN**: Acesso completo a todas as funcionalidades
+- **USER**: Acesso limitado às próprias prescrições e registros
+
+### ⚠️ Regras de Negócio
+
+#### Medicamentos
+- **Intervalo mínimo**: Respeita o intervalo mínimo entre doses
+- **Dose máxima diária**: Controla a dose máxima permitida por dia
+
+#### Prescrições
+- **Interações medicamentosas**: Verifica interações entre medicamentos
+- **Período de validade**: Controla datas de início e fim da prescrição
+- **Frequência**: Valida frequência de administração
+
+#### Registros de Uso
+- **Intervalo entre doses**: Garante intervalo mínimo entre administrações
+- **Dose máxima diária**: Monitora consumo diário
+- **Período da prescrição**: Valida se está dentro do período ativo
+
+## 🧪 Testes
+
+### Executar todos os testes
+```bash
+npm test
+```
+
+### Executar testes com cobertura
+```bash
+npm run test:coverage
+```
+
+### Executar testes de integração
+```bash
+npm run test:integration
+```
+
+## 📊 Estrutura do Projeto
+
+```
+medcontrol/
+├── src/
+│   ├── config/
+│   │   └── swagger.js          # Configuração Swagger
+│   ├── controllers/            # Controladores da API
+│   ├── middlewares/            # Middlewares personalizados
+│   ├── models/                 # Modelos de dados
+│   ├── routes/                 # Definição das rotas
+│   ├── services/               # Lógica de negócio
+│   ├── app.js                  # Configuração Express
+│   └── server.js               # Inicialização do servidor
+├── prisma/
+│   ├── schema.prisma           # Schema do banco de dados
+│   └── seed.js                 # Dados iniciais
+├── tests/                      # Testes unitários e integração
+├── package.json
+├── jest.config.js
+└── README.md
+```
+
+## 🔒 Segurança
+
+- Autenticação JWT com expiração configurável
+- Hash de senhas com bcrypt
+- Autorização baseada em roles (ADMIN/USER)
+- Validações de entrada de dados
+- Tratamento de erros consistente
+
+## 📈 Monitoramento
+
+- Logs estruturados
+- Tratamento de erros centralizado
+- Validações de negócio com alertas
+
+## 🤝 Contribuição
+
+1. Fork o projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/nova-feature`)
+3. Commit suas mudanças (`git commit -am 'Adiciona nova feature'`)
+4. Push para a branch (`git push origin feature/nova-feature`)
+5. Abra um Pull Request
+
+## 📝 Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
+
+## 📞 Suporte
+
+Para suporte, entre em contato:
+- Email: suporte@medcontrol.com
+- Documentação: http://localhost:3000/api-docs
+
+---
+
+**Desenvolvido com ❤️ para controle seguro de medicamentos**
 
 4. Configure o banco de dados:
 ```bash
@@ -312,23 +482,6 @@ npm run test:security     # Executar testes de segurança
 npm run test:watch   # Executar testes em modo watch
 npm run seed         # Popular banco com dados iniciais
 ```
-
-## 🤝 Como Contribuir
-
-1. Fork o projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/nova-feature`)
-3. Commit suas mudanças (`git commit -am 'Adiciona nova feature'`)
-4. Push para a branch (`git push origin feature/nova-feature`)
-5. Abra um Pull Request
-
-## 📄 Licença
-
-Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
-
-## 👥 Autores
-
-- **Seu Nome** - Desenvolvimento inicial
-
 ---
 
 Para mais informações, consulte a [documentação da API](http://localhost:3000/api-docs) após iniciar o servidor.

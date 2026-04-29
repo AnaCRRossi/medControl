@@ -2,6 +2,7 @@ const request = require('supertest');
 const app = require('../../src/app');
 const database = require('../../src/models/database');
 const { generateToken } = require('../../src/services/authService');
+const MedicamentoService = require('../../src/services/MedicamentoService');
 
 function criarPaciente() {
   const id = `user-${Date.now()}-${Math.random()}`;
@@ -35,8 +36,12 @@ async function criarPrescricao(token, overrides = {}) {
 }
 
 describe('Registro de uso', () => {
-  beforeEach(() => {
-    database.reset();
+  beforeEach(async () => {
+    await database.reset();
+    // Garantir que há medicamentos no banco
+    if (database.medicamentos.length === 0) {
+      await MedicamentoService.create('Paracetamol', 'Analgésico', 4, 4000, 'mg');
+    }
   });
 
   it('cria registro valido respeitando intervalo e retorna 201', async () => {

@@ -4,6 +4,20 @@ const { ValidationError, ConflictError, NotFoundError } = require('../../src/mod
 const prisma = MedicamentoService.prisma;
 
 describe('MedicamentoService', () => {
+  beforeAll(async () => {
+    // Clear medications table before all tests
+    await prisma.medication.deleteMany();
+  });
+
+  beforeEach(async () => {
+    // Clear medications table before each test
+    await prisma.medication.deleteMany();
+  });
+
+  afterAll(async () => {
+    // Clean up after all tests
+    await prisma.medication.deleteMany();
+  });
 
   describe('create', () => {
     it('should create a new medicamento successfully', async () => {

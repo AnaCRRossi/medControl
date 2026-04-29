@@ -2,6 +2,7 @@ const request = require('supertest');
 const app = require('../../src/app');
 const database = require('../../src/models/database');
 const { generateToken } = require('../../src/services/authService');
+const MedicamentoService = require('../../src/services/MedicamentoService');
 
 function criarPaciente() {
   const id = `user-${Date.now()}-${Math.random()}`;
@@ -29,8 +30,18 @@ function prescricaoBase(medicamentoId = database.medicamentos[2].id) {
 }
 
 describe('Prescricao', () => {
-  beforeEach(() => {
-    database.reset();
+  beforeEach(async () => {
+    await database.reset();
+    // Garantir que há medicamentos suficientes no banco
+    while (database.medicamentos.length < 3) {
+      await MedicamentoService.create(
+        `Medicamento ${database.medicamentos.length + 1}`,
+        'Descrição do medicamento',
+        4,
+        4000,
+        'mg'
+      );
+    }
   });
 
   it('cria prescricao valida e retorna 201', async () => {

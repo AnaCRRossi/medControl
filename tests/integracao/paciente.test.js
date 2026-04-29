@@ -1,14 +1,25 @@
 const request = require('supertest');
 const app = require('../../src/app');
-const database = require('../../src/models/database');
-const { generateToken } = require('../../src/services/authService');
+const { PrismaClient } = require('@prisma/client');
+const generateToken = require('../helpers/generateToken');
+const { createAdmin } = require('../helpers/createUser');
+
+const prisma = new PrismaClient();
 
 describe('Paciente', () => {
   let adminToken;
 
-  beforeEach(() => {
-    database.reset();
-    adminToken = generateToken(database.users[0].id, 'ADMIN');
+  beforeEach(async () => {
+    // Clear all data
+    await prisma.usageRecord.deleteMany();
+    await prisma.prescription.deleteMany();
+    await prisma.patient.deleteMany();
+    await prisma.medication.deleteMany();
+    await prisma.user.deleteMany();
+
+    // Create admin user using helper
+    const adminUser = await createAdmin();
+    adminToken = generateToken(adminUser.id, adminUser.role);
   });
 
   it('cria paciente com nome e retorna 201', async () => {

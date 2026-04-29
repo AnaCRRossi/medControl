@@ -1,7 +1,9 @@
 const request = require('supertest');
 const app = require('../../src/app');
+const database = require('../../src/models/database');
 const { createAdmin, createRegularUser } = require('../helpers/createUser');
 const generateToken = require('../helpers/generateToken');
+const MedicamentoService = require('../../src/services/MedicamentoService');
 
 describe('Autenticacao e autorizacao', () => {
   let adminToken;
@@ -10,6 +12,18 @@ describe('Autenticacao e autorizacao', () => {
   let regularUser;
 
   beforeEach(async () => {
+    await database.reset();
+    // Garantir que há medicamentos suficientes
+    while (database.medicamentos.length < 3) {
+      await MedicamentoService.create(
+        `Medicamento ${database.medicamentos.length + 1}`,
+        'Descrição do medicamento',
+        4,
+        4000,
+        'mg'
+      );
+    }
+
     // Create users via service
     adminUser = await createAdmin();
     regularUser = await createRegularUser();

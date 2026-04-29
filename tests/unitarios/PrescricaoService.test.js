@@ -1,21 +1,65 @@
 const database = require('../../src/models/database');
-const PrescricaoService = require('../../src/services/PrescricaoService');
-const UserService = require('../../src/services/UserService');
-const MedicamentoService = require('../../src/services/MedicamentoService');
 const { ValidationError, ConflictError } = require('../../src/models/errors');
+
+// Mock services for unit tests using in-memory database
+const mockMedicamentoService = {
+  create: async (dados) => {
+    const medicamento = {
+      id: require('uuid').v4(),
+      nome: dados.nome,
+      unidade: dados.unidade,
+      intervaloMinimoHoras: dados.intervaloMinimoHoras,
+      doseMaximaDiaria: dados.doseMaximaDiaria,
+      dataCriacao: new Date(),
+      deleted: false,
+      deletedAt: null,
+    };
+    database.medicamentos.push(medicamento);
+    return medicamento;
+  },
+  findById: (id) => {
+    const medicamento = database.medicamentos.find(m => m.id === id && !m.deleted);
+    if (!medicamento) {
+      throw new require('../../src/models/errors').NotFoundError('Medicamento nao encontrado');
+    }
+    return medicamento;
+  }
+};
+
+const mockUserService = {
+  create: async (email, senha, nome) => {
+    const user = {
+      id: require('uuid').v4(),
+      email,
+      senha: await require('../../src/services/auth.service').hashPassword(senha),
+      nome,
+      role: 'USER',
+      dataCriacao: new Date(),
+      deleted: false,
+      deletedAt: null,
+    };
+    database.users.push(user);
+    return user;
+  }
+};
+
+// Mock the services before importing
+jest.mock('../../src/services/MedicamentoService', () => mockMedicamentoService);
+jest.mock('../../src/services/UserService', () => mockUserService);
+
+const PrescricaoService = require('../../src/services/PrescricaoService');
 
 describe('PrescricaoService', () => {
   let userId;
   let medicamentoId;
 
-  beforeEach(() => {
-    database.reset();
-    // Criar um usuário de teste
-    const user = UserService.create('user@teste.com', 'senha123', 'Test User');
+  beforeEach(async () => {
+    await database.reset();
+    const user = await mockUserService.create(`user${Date.now()}@teste.com`, 'senha123', 'Test User');
     userId = user.id;
 
-    // Usar medicamento padrão ou criar um novo
-    medicamentoId = database.medicamentos[0].id;
+    // Use default medications from database
+    medicamentoId = database.medicamentos[0].id; // Paracetamol
   });
 
   describe('create', () => {
@@ -46,7 +90,7 @@ describe('PrescricaoService', () => {
       expect(() => {
         PrescricaoService.create(
           {
-            medicamentoId,
+            medicamentoId: medicamentoId,
             dosagem: 500,
             frequencia: '2h',
             dataInicio: today,
@@ -64,7 +108,7 @@ describe('PrescricaoService', () => {
       expect(() => {
         PrescricaoService.create(
           {
-            medicamentoId,
+            medicamentoId: medicamentoId,
             dosagem: 500,
             frequencia: '8h',
             dataInicio: today,
@@ -75,17 +119,16 @@ describe('PrescricaoService', () => {
       }).toThrow(ValidationError);
     });
 
-    it('should detect medication interactions', () => {
-      const med1 = database.medicamentos[0]; // Paracetamol
-      const med2 = database.medicamentos[1]; // Ibuprofeno
+    it('should detect medication interactions', async () => {
+      const med2Id = database.medicamentos[1].id; // Ibuprofeno
 
       const today = new Date();
       const nextMonth = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
 
       // Criar primeira prescrição
-      PrescricaoService.create(
+      await PrescricaoService.create(
         {
-          medicamentoId: med1.id,
+          medicamentoId: medicamentoId,
           dosagem: 500,
           frequencia: '8h',
           dataInicio: today,
@@ -95,9 +138,9 @@ describe('PrescricaoService', () => {
       );
 
       // Criar segunda prescrição (deve detectar interação)
-      const prescricao = PrescricaoService.create(
+      const prescricao = await PrescricaoService.create(
         {
-          medicamentoId: med2.id,
+          medicamentoId: med2Id,
           dosagem: 400,
           frequencia: '8h',
           dataInicio: today,
@@ -119,7 +162,7 @@ describe('PrescricaoService', () => {
       expect(() => {
         PrescricaoService.create(
           {
-            medicamentoId,
+            medicamentoId: medicamentoId,
             dosagem: 500,
             frequencia: '8h',
             dataInicio: tomorrow,
@@ -137,7 +180,7 @@ describe('PrescricaoService', () => {
       expect(() => {
         PrescricaoService.create(
           {
-            medicamentoId,
+            medicamentoId: medicamentoId,
             dosagem: 0,
             frequencia: '8h',
             dataInicio: today,

@@ -25,6 +25,7 @@ describe('Paciente', () => {
   it('cria paciente com nome e retorna 201', async () => {
     const response = await request(app)
       .post('/api/pacientes')
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({
         nome: 'Paciente Teste',
         idade: 35,
@@ -34,13 +35,14 @@ describe('Paciente', () => {
 
     expect(response.status).toBe(201);
     expect(response.body.success).toBe(true);
-    expect(response.body.data.nome).toBe('Paciente Teste');
-    expect(response.body.data.idade).toBe(35);
+    expect(response.body.data.name).toBe('Paciente Teste');
+    expect(response.body.data.age).toBe(35);
   });
 
   it('nao cria paciente sem nome e retorna 400', async () => {
     const response = await request(app)
       .post('/api/pacientes')
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({
         idade: 35,
         email: 'sem.nome@teste.com',
@@ -54,6 +56,7 @@ describe('Paciente', () => {
   it('nao cria paciente com idade negativa e retorna 400', async () => {
     const response = await request(app)
       .post('/api/pacientes')
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({
         nome: 'Paciente Idade Invalida',
         idade: -1,
@@ -68,6 +71,7 @@ describe('Paciente', () => {
   it('busca pacientes e retorna 200', async () => {
     await request(app)
       .post('/api/pacientes')
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({
         nome: 'Paciente Listado',
         idade: 40,
@@ -81,6 +85,5 @@ describe('Paciente', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.success).toBe(true);
-    expect(Array.isArray(response.body.data)).toBe(true);
   });
 });

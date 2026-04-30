@@ -1,6 +1,5 @@
 const express = require('express');
-const swaggerUi = require('swagger-ui-express');
-const swaggerSpec = require('./config/swagger');
+const { swaggerUi, specs } = require('./config/swagger');
 const errorHandler = require('./middlewares/errorHandler');
 
 const authRoutes = require('./routes/auth.routes');
@@ -15,7 +14,7 @@ const roleMiddleware = require('./middlewares/role.middleware');
 const app = express();
 
 app.use(express.json());
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 app.get('/', (req, res) => {
   res.send('MedControl API running');

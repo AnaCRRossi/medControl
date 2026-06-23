@@ -35,13 +35,19 @@ class PrescricaoService {
       );
 
       if (interacao) {
-        const med1 = MedicamentoService.findById(interacao.medicamento1Id);
-        const med2 = MedicamentoService.findById(interacao.medicamento2Id);
-        interacoes.push({
-          medicamentos: [med1.nome, med2.nome],
-          nivelRisco: interacao.nivelRisco,
-          descricao: interacao.descricao,
-        });
+        try {
+          const med1 = MedicamentoService.findById(interacao.medicamento1Id);
+          const med2 = MedicamentoService.findById(interacao.medicamento2Id);
+          interacoes.push({
+            medicamentos: [med1.nome, med2.nome],
+            nivelRisco: interacao.nivelRisco,
+            descricao: interacao.descricao,
+          });
+        } catch (error) {
+          if (!(error instanceof NotFoundError)) {
+            throw error;
+          }
+        }
       }
     });
 

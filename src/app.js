@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const { swaggerUi, specs } = require('./config/swagger');
 const errorHandler = require('./middlewares/errorHandler');
 
@@ -14,6 +15,7 @@ const roleMiddleware = require('./middlewares/role.middleware');
 const app = express();
 
 app.use(express.json());
+app.use('/app', express.static(path.join(__dirname, '../public')));
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 app.get('/', (req, res) => {

@@ -1,5 +1,6 @@
 require('dotenv').config({ path: '.env.test' });
 const { PrismaClient } = require('@prisma/client');
+const database = require('../src/models/database');
 
 const prisma = new PrismaClient();
 
@@ -12,6 +13,8 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
+  database.reset();
+
   // Clear in correct order to avoid foreign key constraints
   await prisma.usageRecord.deleteMany();
   await prisma.prescription.deleteMany();

@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MedControl</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/app/styles.css" />
+  </head>
+  <body>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <main id="loginView" class="login-shell">
+      <section class="login-card" aria-labelledby="loginTitle">
+        <div class="brand-row">
+          <span class="brand-mark">MC</span>
+          <div>
+            <strong>MedControl</strong>
+            <small>Controle clinico de medicamentos</small>
+          </div>
+        </div>
+
+        <div class="login-copy">
+          <p class="eyebrow">Acesso seguro</p>
+          <h1 id="loginTitle">Gerencie prescricoes com clareza.</h1>
+          <p>Entre para acompanhar pacientes, medicamentos, prescricoes e registros de uso em uma interface feita para leitura rapida.</p>
+        </div>
+
+        <form id="loginForm" class="form-stack">
+          <label>
+            Email
+            <input id="loginEmail" name="email" type="email" autocomplete="email" value="admin@email.com" required />
+          </label>
+          <label>
+            Senha
+            <input id="loginPassword" name="senha" type="password" autocomplete="current-password" value="123456" required />
+          </label>
+          <button class="button primary" type="submit">Entrar</button>
+          <a class="subtle-link" href="#" aria-label="Recuperar senha">Esqueci minha senha</a>
+        </form>
+      </section>
+
+      <section class="login-visual" aria-label="Resumo visual do MedControl">
+        <img src="/app/assets/login-clinical.png" alt="Ambiente clinico com tablet exibindo agenda de medicamentos" />
+        <div class="visual-panel">
+          <span class="status-dot"></span>
+          <strong>Alertas clinicos ativos</strong>
+          <p>Interacoes, dose maxima e intervalos em destaque para decisao segura.</p>
+        </div>
+      </section>
+    </main>
+
+    <main id="appView" class="app-shell" hidden>
+      <aside class="sidebar">
+        <div class="brand-row compact">
+          <span class="brand-mark">MC</span>
+          <div>
+            <strong>MedControl</strong>
+            <small id="roleBadge">ADMIN</small>
+          </div>
+        </div>
+
+        <nav class="nav-list" aria-label="Menu principal">
+          <button class="nav-item active" data-view="dashboard">Dashboard</button>
+          <button class="nav-item" data-view="pacientes">Pacientes</button>
+          <button class="nav-item" data-view="medicamentos">Medicamentos</button>
+          <button class="nav-item" data-view="prescricoes">Prescricoes</button>
+          <button class="nav-item" data-view="registros">Registro de Uso</button>
+        </nav>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow" id="sectionEyebrow">Visao geral</p>
+            <h1 id="sectionTitle">Dashboard</h1>
+          </div>
+          <div class="topbar-actions">
+            <input id="globalSearch" class="search-input" type="search" placeholder="Buscar..." />
+            <div class="user-chip">
+              <span id="userInitials">AD</span>
+              <div>
+                <strong id="userName">Admin</strong>
+                <small id="userEmail">admin@email.com</small>
+              </div>
+            </div>
+            <button id="logoutButton" class="icon-button" type="button" title="Sair">Sair</button>
+          </div>
+        </header>
+
+        <section id="dashboard" class="view active-view">
+          <div class="metric-grid">
+            <article class="metric-card">
+              <span>Total de Pacientes</span>
+              <strong id="metricPacientes">0</strong>
+            </article>
+            <article class="metric-card">
+              <span>Total de Medicamentos</span>
+              <strong id="metricMedicamentos">0</strong>
+            </article>
+            <article class="metric-card">
+              <span>Total de Prescricoes</span>
+              <strong id="metricPrescricoes">0</strong>
+            </article>
+            <article class="metric-card">
+              <span>Total de Registros de Uso</span>
+              <strong id="metricRegistros">0</strong>
+            </article>
+          </div>
+
+          <div class="content-grid">
+            <article class="panel">
+              <div class="panel-header">
+                <h2>Alertas clinicos</h2>
+                <span class="pill warning">Prioridade</span>
+              </div>
+              <div id="clinicalAlerts" class="alert-list"></div>
+            </article>
+            <article class="panel">
+              <div class="panel-header">
+                <h2>Atividade recente</h2>
+                <span class="pill success">Online</span>
+              </div>
+              <div id="recentActivity" class="activity-list"></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="pacientes" class="view">
+          <div class="table-toolbar">
+            <div>
+              <h2>Pacientes</h2>
+              <p>Cadastro e acompanhamento dos pacientes.</p>
+            </div>
+            <button class="button primary" data-modal="paciente">Novo paciente</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Nome</th><th>Idade</th><th>Email</th><th>Acoes</th></tr></thead>
+              <tbody id="pacientesTable"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="medicamentos" class="view">
+          <div class="table-toolbar">
+            <div>
+              <h2>Medicamentos</h2>
+              <p>Dose maxima diaria e intervalo minimo para validacoes.</p>
+            </div>
+            <button class="button primary" data-modal="medicamento">Novo medicamento</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Nome</th><th>Dose maxima diaria</th><th>Intervalo minimo</th><th>Unidade</th><th>Acoes</th></tr></thead>
+              <tbody id="medicamentosTable"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="prescricoes" class="view">
+          <div class="table-toolbar">
+            <div>
+              <h2>Prescricoes</h2>
+              <p>Controle de dosagem, frequencia e periodo de tratamento.</p>
+            </div>
+            <button class="button primary" data-modal="prescricao">Nova prescricao</button>
+          </div>
+          <div id="interactionBanner" class="clinical-banner" hidden></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Paciente</th><th>Medicamento</th><th>Dosagem</th><th>Frequencia</th><th>Inicio</th><th>Fim</th><th>Acoes</th></tr></thead>
+              <tbody id="prescricoesTable"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="registros" class="view">
+          <div class="table-toolbar">
+            <div>
+              <h2>Registro de Uso</h2>
+              <p>Historico de administracao e alertas de seguranca.</p>
+            </div>
+            <button class="button primary" data-modal="registro">Novo registro</button>
+          </div>
+          <div id="usageAlertBanner" class="clinical-banner" hidden></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Data/Hora</th><th>Medicamento</th><th>Dose administrada</th><th>Prescricao</th><th>Acoes</th></tr></thead>
+              <tbody id="registrosTable"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <div id="modalBackdrop" class="modal-backdrop" hidden>
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-header">
+          <h2 id="modalTitle">Cadastro</h2>
+          <button id="closeModal" class="icon-button" type="button">Fechar</button>
+        </div>
+        <form id="modalForm" class="modal-body"></form>
+      </section>
+    </div>
+
+    <script src="/app/app.js"></script>
+  </body>
+</html>

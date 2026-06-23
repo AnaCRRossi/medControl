@@ -14,6 +14,7 @@ class AuthService {
 
   generateToken(user) {
     const payload = {
+      userId: user.id,
       id: user.id,
       role: user.role,
     };

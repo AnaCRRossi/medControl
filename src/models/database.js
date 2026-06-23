@@ -1,5 +1,5 @@
 const { v4: uuidv4 } = require('uuid');
-const AuthService = require('../services/auth.service');
+const bcrypt = require('bcryptjs');
 
 class Database {
   constructor() {
@@ -11,9 +11,9 @@ class Database {
     this.initializeDefaultData();
   }
 
-  async initializeDefaultData() {
+  initializeDefaultData() {
     // Admin padrão para testes
-    const hashedPassword = await AuthService.hashPassword('admin123');
+    const hashedPassword = bcrypt.hashSync('admin123', 10);
     this.users.push({
       id: uuidv4(),
       email: 'admin@medcontrol.com',
@@ -75,13 +75,13 @@ class Database {
     );
   }
 
-  async reset() {
+  reset() {
     this.users = [];
     this.medicamentos = [];
     this.prescricoes = [];
     this.registrosUso = [];
     this.interacoesMedicamentosas = [];
-    await this.initializeDefaultData();
+    this.initializeDefaultData();
   }
 }
 
